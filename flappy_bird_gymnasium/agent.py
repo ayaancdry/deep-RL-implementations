@@ -69,10 +69,6 @@ class Agent:
 
                 # Move to new state. Keep track of your current state
                 state = new_state
-
-
-                # if terminated:
-                #     break
             
             rewards_per_episode.append(episode_reward) # Append the reward of each episode to the list
 
