@@ -2,4 +2,17 @@ cartpole1:
     env_id: CartPole-v1
     replay_memory_size: 100000 
     mini_batch_size: 32
-    
+    epsilon_init: 1
+    epsilon_decay: 0.9995
+    epsilon_min: 0.05
+
+' 
+env_id made dynamics. This will help in changint the environment easilty, eg when we will want to switch to FlappyBird-v0
+replay_memory_size needs to be large. Small size will lead to recent transitions getting removed due to incoming new transitions. 
+mini_batch_size tells us the sample size (of transitions picked randomly from the memory deque).
+
+For epislon_greedy algorithm, 
+initialise epsilon to 1 (100%confirmed than agent will take RANDOM action),
+then, decay it with a rate of 0.9995,
+keep decaying it until it's value reached 0.05, i.e, a 5% chance that agent will take a random action and 95% chance that the agent will take the action dictated by a trained policy.
+'
