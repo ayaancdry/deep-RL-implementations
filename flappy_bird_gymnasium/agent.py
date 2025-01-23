@@ -7,6 +7,7 @@ class Agent:
     '''run function will do both the training as well as run the test afterwards'''
     def run(self, is_training=True, render=False):
         # env = gym.make("FlappyBird-v0", render_mode = "human" if render else None, use_lidar=True)
+        ''' CartPole for easier & faster implementations'''
         env = gym.make("CartPole-v1", render_mode = "human" if render else None) 
         # render only if render variable is True, otherwise don't
 
