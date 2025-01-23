@@ -4,8 +4,23 @@ import flappy_bird_gymnasium
 from dqn import DQN
 from experience_relay import ReplayMemory
 import itertools
+import yaml
 
 class Agent:
+    
+    ''' open the .yaml file and read the hyperparameters and store them into an array'''
+    def __init__(self, hyperparameter_set):
+        with open('hyperparameters.yaml', 'r') as file:
+            all_hyperparameter_sets = yaml.safe_load(file)
+            hyperparameters = all_hyperparameter_sets[hyperparameter_set]  # store the hyperparameters read from the file into an array
+
+            self.replay_memory_size = hyperparameters['replay_memory_size'] # size of replay memory
+            self.mini_batch_size = hyperparameters['mini_batch_size ']      # size of training dataset sampled from the replay memory
+            self.epsilon_init = hyperparameters['epsilon_init']             # 1-100% random actions
+            self.epsilon_decay = hyperparameters['epsilon_decay']           # epsilon decay rate
+            self.epsilon_min = hyperparameters['epsilon_min']               # minimum epsilon value
+    
+
     '''run function will do both the training as well as run the test afterwards'''
     def run(self, is_training=True, render=False):
         # env = gym.make("FlappyBird-v0", render_mode = "human" if render else None, use_lidar=True)
@@ -31,7 +46,7 @@ class Agent:
 
         ''' If we're training, initialise the deque, i.e, the replay memory'''
         if is_training:
-            memory = ReplayMemory(10000)
+            memory = ReplayMemory(self.replay_memory_size)
         
 
         for episode in itertools.count():
