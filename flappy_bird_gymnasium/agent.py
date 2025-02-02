@@ -164,6 +164,13 @@ class Agent:
                             = (reward) + (discount_factor)*max(q[new_state, : ])  
         '''
 
+        
+        
+        ''' Earlier, we were processing one experience at a time. This will lead to the usage of optimizer a lot of times.
+        PyTorch could process whole batch at once for us. 
+        Hence the few lines of code below have been commented out because the code will be modified so that whole batch is processed one at a time, instead of processing a single experience at a time.
+
+        
         # we will use the 2nd method from the above.
         for state, action, new_state, reward, terminated in mini_batch:
 
@@ -172,16 +179,30 @@ class Agent:
             else:
                 with torch.no_grad():
                     target_q = reward + self.discount_factor_g * target_dqn(new_state).max()
+        '''
+
+        # Transpose the list of experiences and separate each element
+        states, actions, new_states, rewards, terminations = zip(*mini_batch)
+
+        # Stack tensors to create batch tensors, example : tensor([[1,2,3]])
+        states = torch.stack(states)
+        actions = torch.stack(actions)
+        new_states = torch.stack(new_states)
+        rewards = torch.stack(rewards)
+        terminations = torch.tensor(terminations).float()
+
+        with torch.no_grad():
+            target_q = rewards + (1-terminations) * self.discount_factor_g * target_dqn(new_states).max(dim=1)[0]
 
 
-            current_q = policy_dqn(state) # current q value as calculated by the policy network for the current state
+        current_q = policy_dqn(states).gather(dim=1, index=actions.unsqueeze(dim=1)).squeeze() 
 
-            ''' calculate the mean squared loss between the actual current q value and the target q value'''
-            loss = self.loss_fn(current_q, target_q)
+        ''' calculate the mean squared loss between the actual current q value and the target q value'''
+        loss = self.loss_fn(current_q, target_q)
 
-            self.optimizer.zero_grad() # to clear the gradients
-            loss.backward() # to compute gradients for back propagation
-            self.optimizer.step() # to update the network parameters (the weights and the bias in the neural net)
+        self.optimizer.zero_grad() # to clear the gradients
+        loss.backward() # to compute gradients for back propagation
+        self.optimizer.step() # to update the network parameters (the weights and the bias in the neural net)
 
 
 if __name__ == "__main__":
