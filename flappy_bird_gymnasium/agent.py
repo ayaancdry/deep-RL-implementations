@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 import gymnasium as gym
 import flappy_bird_gymnasium
 from dqn import DQN
@@ -20,7 +21,12 @@ class Agent:
             self.epsilon_init = hyperparameters['epsilon_init']             # 1-100% random actions
             self.epsilon_decay = hyperparameters['epsilon_decay']           # epsilon decay rate
             self.epsilon_min = hyperparameters['epsilon_min']               # minimum epsilon value
-    
+            self.network_sync_rate = hyperparameters['network_sync_rate']
+            self.learning_rate_a = hyperparameters['learning_rate_a']
+            self.discount_factor_g = hyperparameters['discount_factor_g']
+
+            self.loss_fn = nn.MSELoss() # mean_squared_error loss function
+            self.optimizer = None # optimizer will be declared in the run function
 
     '''run function will do both the training as well as run the test afterwards'''
     def run(self, is_training=True, render=False):
@@ -52,6 +58,17 @@ class Agent:
         
             epsilon = self.epsilon_init # initialised epsilon
 
+            # declare the target network
+            target_dqn = DQN(num_states, num_actions)
+            # sync the values of weights from the policy function to here
+            target_dqn.load_state_dict(policy_dqn.state_dict())
+
+            # keep a step count ecause after a few actions the target network and the policy network are synced
+            step_count=0
+
+            # declare the optimizer
+            self.optimizer = torch.optim.Adam(policy_dqn.parameters(), lr=self.learning_rate_a)
+
 
         for episode in itertools.count():
             # itertools help in running the loop continuously till the time I stop it after I get decent results. 
@@ -69,7 +86,7 @@ class Agent:
 
 
             while not terminated:
-                ''' if we're training and we select a random number which is less than epsilon, then we a random action will be implemented'''
+                ''' if we're training and we select a random number which is less than epsilon, then we a random action will be implemented. For example, we choose 0.6. That means, there will be a 0.2 percent chance that the action taken will be random. The initialised epsilon value is 1, ie, initially, 100 percent chance that the action taken will be random and not the action which will be decided upon by the policy.'''
                 if is_training and random.random()<epsilon:
                     action = env.action_space.sample() 
                     # convert into tensor
@@ -107,6 +124,9 @@ class Agent:
                 if is_training:
                     memory.append((state, action, new_state, reward, terminated))
 
+                    # increment the step count
+                    step_count+=1
+
                 # Move to new state. Keep track of your current state
                 state = new_state
             
@@ -117,6 +137,41 @@ class Agent:
             # We need to slowly decease epsilon after one episode. 
             epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
             epsilon_history.append(epsilon)
+
+            # Check if enough experiences have been collected
+            if len(memory) > self.mini_batch_size:
+
+                # sample from memory
+                mini_batch = memory.sample(self.mini_batch_size)
+
+                self.optimise(mini_batch, policy_dqn, target_dqn)
+
+                ''' If step_count > network sync rate, then we will use the same code as above to load the policy network weights and biases into the target network'''
+                if step_count > self.network_sync_rate:
+                    target_dqn.load_state_dict(policy_dqn.state_dict())
+                    # after syncing, reinitialise step_count to zero
+                    step_count = 0
+
+
+    '''define the optimize function used above'''  
+    def optimize(self, mini_batch, policy_dqn, target_dqn):
+        ''' Two ways to calculate the Target (Q value) :
+        1. Q-learning Formula : here, we don't use a deep network, just a table of states and actions.
+            q[state, action] = q[state,action] + [(learning_rate) * { (reward) + (discount_factor)*max(q[new_state, : ]) - q[state,action] }]
+        
+        2. DQN Target Formula : DQN used
+            q[state,action] = reward, if the new_state is terminal
+                            = (reward) + (discount_factor)*max(q[new_state, : ])  
+        '''
+
+        # we will use the 2nd method from the above.
+        for state, action, new_state, reward, terminated in mini_batch:
+
+            if terminated:
+                target = reward
+            else:
+                with torch.no_grad():
+                    target_q = reward + self.discount_factor_g * target_dqn(new_state).max()
 
 
 if __name__ == "__main__":
