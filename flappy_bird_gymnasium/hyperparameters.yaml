@@ -5,7 +5,10 @@ cartpole1:
     epsilon_init: 1
     epsilon_decay: 0.9995
     epsilon_min: 0.05
-
+    network_sync_rate: 10
+    # after 10 rounds, the two networks will be synced
+    learning_rate_a: 0.0001
+    discount_factor_g: 0.99
 
 # env_id made dynamics. This will help in changint the environment easilty, eg when we will want to switch to FlappyBird-v0
 # replay_memory_size needs to be large. Small size will lead to recent transitions getting removed due to incoming new transitions. 
