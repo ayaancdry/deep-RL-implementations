@@ -144,7 +144,7 @@ class Agent:
                 # sample from memory
                 mini_batch = memory.sample(self.mini_batch_size)
 
-                self.optimise(mini_batch, policy_dqn, target_dqn)
+                self.optimize(mini_batch, policy_dqn, target_dqn)
 
                 ''' If step_count > network sync rate, then we will use the same code as above to load the policy network weights and biases into the target network'''
                 if step_count > self.network_sync_rate:
@@ -172,6 +172,16 @@ class Agent:
             else:
                 with torch.no_grad():
                     target_q = reward + self.discount_factor_g * target_dqn(new_state).max()
+
+
+            current_q = policy_dqn(state) # current q value as calculated by the policy network for the current state
+
+            ''' calculate the mean squared loss between the actual current q value and the target q value'''
+            loss = self.loss_fn(current_q, target_q)
+
+            self.optimizer.zero_grad() # to clear the gradients
+            loss.backward() # to compute gradients for back propagation
+            self.optimizer.step() # to update the network parameters (the weights and the bias in the neural net)
 
 
 if __name__ == "__main__":
